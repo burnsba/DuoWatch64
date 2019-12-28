@@ -31,17 +31,21 @@ The controller then (immediately) responds with 32 bits to indicate the controll
 - [1:2] left shoulder
 - [1:3] right shoulder
 - [1:4] c up
-- [1:5] c up
-- [1:6] c up
-- [1:7] c up
+- [1:5] c down
+- [1:6] c left
+- [1:7] c right
 - [2] analog stick x position
 - [3] analog stick y position
 
 Note that the analog position byte is read in reverse order. Also note that the range is only one byte. Zero is netrual, positive is right/up, negative is left/down.
 
+After these 41 bits (~164 us), the line is held high for close to 1ms. I guess the controller is only read once per framerate.
+
 # Software overview
 
-Each data line is read in round robin fashion. The read st
+Each data line is read in round robin fashion. The read starts by waiting for the next frame. Each of the 32 controller bits is read into a 32 bit buffer (4 bytes). After the line is read, this should be in the dead time between reads (~1 frame), this is when transmition over the serial port occurs. There's a simply protocol, each update to the host pc is an 8 byte packet. It starts with `'>'` followed by ASCII controller port (`'1'` or `'2'`), followed by `':'`. Next comes the raw 4 byte state of the controller, and finally a close indicator, `'|'`. That should have completed before the next frame, and the Duo then goes on to repeat this process for the next controller.
+
+If there is no controller connected on one of the ports, or if a controller gets disconnected, the firmware will stop trying to read after too many failures. To enable reading again, hit the reset button on the Arduino board.
 
 # Limitations
 
