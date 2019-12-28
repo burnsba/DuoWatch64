@@ -43,7 +43,7 @@ After these 41 bits (~164 us), the line is held high for close to 1ms. I guess t
 
 # Software overview
 
-Each data line is read in round robin fashion. The read starts by waiting for the next frame. Each of the 32 controller bits is read into a 32 bit buffer (4 bytes). After the line is read, this should be in the dead time between reads (~1 frame), this is when transmition over the serial port occurs. There's a simply protocol, each update to the host pc is an 8 byte packet. It starts with `'>'` followed by ASCII controller port (`'1'` or `'2'`), followed by `':'`. Next comes the raw 4 byte state of the controller, and finally a close indicator, `'|'`. That should have completed before the next frame, and the Duo then goes on to repeat this process for the next controller.
+Each data line is read in round robin fashion. The read starts by waiting for the next frame. Each of the 32 controller bits is read into a 32 bit buffer (4 bytes). After the line is read, this should be in the dead time between reads (~1 frame), this is when transmission over the serial port occurs. There's a simple protocol, each update to the host pc is an 8 byte packet. It starts with `'>'` followed by ASCII controller port (`'1'` or `'2'`), followed by `':'`. Next comes the raw 4 byte state of the controller, and finally a close indicator, `'|'`. That should have completed before the next frame, and the Duo then goes on to repeat this process for the next controller.
 
 If there is no controller connected on one of the ports, or if a controller gets disconnected, the firmware will stop trying to read after too many failures. To enable reading again, hit the reset button on the Arduino board.
 
