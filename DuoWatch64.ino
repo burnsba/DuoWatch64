@@ -23,7 +23,7 @@
  * ['>'][controller_id][':'][controller_data (32 bits)]['|']
  * controller_id is ascii, '1' or '2' (or '3' or '4' I guess)
  * 
- * This is designed to be used with an Arduino Duo.
+ * This is designed to be used with an Arduino Uno.
  */
 
 #define SERIAL_BAUDRATE 250000
