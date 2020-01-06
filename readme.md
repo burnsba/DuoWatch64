@@ -13,9 +13,9 @@ In order for this to work, the data line of the controller needs to be connected
 
 # Controller communication protocol
 
-The Nintendo 64 console sends a "read" message to the controller consisting of 8 bits and a stop bit. Each bit starts with the falling edge of the signal and lasts for 4 microseconds. A logical zero is indicated by the line being held low for 3 microseconds, then high for 1 microsecond. A logical one is indicated by the reverse, 1us low then 3us high.
+The Nintendo 64 console sends a command to the controller consisting of 8 bits and a stop bit. Each bit starts with the falling edge of the signal and lasts for 4 microseconds, except the stop bit, which is 3us. A logical zero is indicated by the line being held low for 3 microseconds, then high for 1 microsecond. A logical one is indicated by the reverse, 1us low then 3us high.
 
-The controller then (immediately) responds with 32 bits to indicate the controller state and then a stop bit. State is indicated by:
+There are different commands (e.g., to interact with the memory card), but this project only cares about the read command. Once the read command is received, the controller then (immediately) responds with 32 bits to indicate the controller state and then a stop bit. State is indicated by:
 
 - [byte:bit]
 - [0:0] a button

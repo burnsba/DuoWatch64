@@ -74,10 +74,24 @@
 
 // nop for 32 instructions.
 // @ 16 MHz = 2us
+#define WAIT28() asm volatile("\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop");
 #define WAIT30() asm volatile("\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop");
 #define WAIT32()    asm volatile("\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop")
 
 #define WAIT() WAIT30()
+
+// Console controller commands
+// (reverse byte order, actual command is listed in comment)
+// command 0x00
+#define CONSOLE_COMMAND_STATUS 0x00
+// command 0x01
+#define CONSOLE_COMMAND_POLL 0x80
+// command 0x02
+#define CONSOLE_COMMAND_MEMORY_READ 0x40
+// command 0x03
+#define CONSOLE_COMMAND_MEMORY_WRITE 0xc0
+// command 0xff
+#define CONSOLE_COMMAND_RESET 0xff
 
 // Read controller data into this buffer.
 unsigned char stateBufferController[4];
@@ -103,6 +117,10 @@ int controller_1_failcount = 0;
 
 // Number of times failed to read controller 2.
 int controller_2_failcount = 0;
+
+int read_success;
+int console_command;
+int checkbyte2;
 
 void setup()
 {
@@ -150,7 +168,7 @@ inline void wait_for_next_frame_controller_2()
     } while (hc < WAIT_FRAME_HIGH_COUNT);
 }
 
-inline void read_controller_1_pin_to_min_buffer()
+inline int read_controller_1_pin_to_min_buffer()
 {
     wait_for_next_frame_controller_1();
 
@@ -160,15 +178,19 @@ inline void read_controller_1_pin_to_min_buffer()
     // I'll be dropping the first nine bits read, because we
     // don't really care about the console request+stop bit.
   
-    /*..........................*/ while (CONTROLLER_1_PIN > 0); WAIT(); stateBufferController[0] = CONTROLLER_1_PIN_TO_B0();
-    while (CONTROLLER_1_PIN == 0); while (CONTROLLER_1_PIN > 0); WAIT(); stateBufferController[0] = CONTROLLER_1_PIN_TO_B0();
-    while (CONTROLLER_1_PIN == 0); while (CONTROLLER_1_PIN > 0); WAIT(); stateBufferController[0] = CONTROLLER_1_PIN_TO_B0();
-    while (CONTROLLER_1_PIN == 0); while (CONTROLLER_1_PIN > 0); WAIT(); stateBufferController[0] = CONTROLLER_1_PIN_TO_B0();
-    while (CONTROLLER_1_PIN == 0); while (CONTROLLER_1_PIN > 0); WAIT(); stateBufferController[0] = CONTROLLER_1_PIN_TO_B0();
-    while (CONTROLLER_1_PIN == 0); while (CONTROLLER_1_PIN > 0); WAIT(); stateBufferController[0] = CONTROLLER_1_PIN_TO_B0();
-    while (CONTROLLER_1_PIN == 0); while (CONTROLLER_1_PIN > 0); WAIT(); stateBufferController[0] = CONTROLLER_1_PIN_TO_B0();
-    while (CONTROLLER_1_PIN == 0); while (CONTROLLER_1_PIN > 0); WAIT(); stateBufferController[0] = CONTROLLER_1_PIN_TO_B0();
-    while (CONTROLLER_1_PIN == 0); while (CONTROLLER_1_PIN > 0); WAIT(); stateBufferController[0] = CONTROLLER_1_PIN_TO_B0();
+    /*..........................*/ while (CONTROLLER_1_PIN > 0); WAIT(); console_command = CONTROLLER_1_PIN_TO_B0();
+    while (CONTROLLER_1_PIN == 0); while (CONTROLLER_1_PIN > 0); WAIT(); console_command |= CONTROLLER_1_PIN_TO_B1();
+    while (CONTROLLER_1_PIN == 0); while (CONTROLLER_1_PIN > 0); WAIT(); console_command |= CONTROLLER_1_PIN_TO_B2();
+    while (CONTROLLER_1_PIN == 0); while (CONTROLLER_1_PIN > 0); WAIT(); console_command |= CONTROLLER_1_PIN_TO_B3();
+    while (CONTROLLER_1_PIN == 0); while (CONTROLLER_1_PIN > 0); WAIT(); console_command |= CONTROLLER_1_PIN_TO_B4();
+    while (CONTROLLER_1_PIN == 0); while (CONTROLLER_1_PIN > 0); WAIT(); console_command |= CONTROLLER_1_PIN_TO_B5();
+    while (CONTROLLER_1_PIN == 0); while (CONTROLLER_1_PIN > 0); WAIT(); console_command |= CONTROLLER_1_PIN_TO_B6();
+    while (CONTROLLER_1_PIN == 0); while (CONTROLLER_1_PIN > 0); WAIT(); console_command |= CONTROLLER_1_PIN_TO_B7();
+    while (CONTROLLER_1_PIN == 0); while (CONTROLLER_1_PIN > 0); WAIT(); checkbyte2 = CONTROLLER_1_PIN_TO_B0();
+
+    if (console_command != CONSOLE_COMMAND_POLL)
+        return 0;
+    
     while (CONTROLLER_1_PIN == 0); while (CONTROLLER_1_PIN > 0); WAIT(); stateBufferController[0] = CONTROLLER_1_PIN_TO_B0();
     while (CONTROLLER_1_PIN == 0); while (CONTROLLER_1_PIN > 0); WAIT(); stateBufferController[0] |= CONTROLLER_1_PIN_TO_B1();
     while (CONTROLLER_1_PIN == 0); while (CONTROLLER_1_PIN > 0); WAIT(); stateBufferController[0] |= CONTROLLER_1_PIN_TO_B2();
@@ -201,9 +223,11 @@ inline void read_controller_1_pin_to_min_buffer()
     while (CONTROLLER_1_PIN == 0); while (CONTROLLER_1_PIN > 0); WAIT(); stateBufferController[3] |= CONTROLLER_1_PIN_TO_B5();
     while (CONTROLLER_1_PIN == 0); while (CONTROLLER_1_PIN > 0); WAIT(); stateBufferController[3] |= CONTROLLER_1_PIN_TO_B6();
     while (CONTROLLER_1_PIN == 0); while (CONTROLLER_1_PIN > 0); WAIT(); stateBufferController[3] |= CONTROLLER_1_PIN_TO_B7();
+
+    return 1;
 }
 
-inline void read_controller_2_pin_to_min_buffer()
+inline int read_controller_2_pin_to_min_buffer()
 {
     // This should be called right after reading the controller 1 input,
     // so should be in the dead time between frames.
@@ -213,15 +237,19 @@ inline void read_controller_2_pin_to_min_buffer()
 
     wait_for_next_frame_controller_2();
 
-    /*..........................*/ while (CONTROLLER_2_PIN > 0); WAIT(); stateBufferController[0] = CONTROLLER_2_PIN_TO_B0();
-    while (CONTROLLER_2_PIN == 0); while (CONTROLLER_2_PIN > 0); WAIT(); stateBufferController[0] = CONTROLLER_2_PIN_TO_B0();
-    while (CONTROLLER_2_PIN == 0); while (CONTROLLER_2_PIN > 0); WAIT(); stateBufferController[0] = CONTROLLER_2_PIN_TO_B0();
-    while (CONTROLLER_2_PIN == 0); while (CONTROLLER_2_PIN > 0); WAIT(); stateBufferController[0] = CONTROLLER_2_PIN_TO_B0();
-    while (CONTROLLER_2_PIN == 0); while (CONTROLLER_2_PIN > 0); WAIT(); stateBufferController[0] = CONTROLLER_2_PIN_TO_B0();
-    while (CONTROLLER_2_PIN == 0); while (CONTROLLER_2_PIN > 0); WAIT(); stateBufferController[0] = CONTROLLER_2_PIN_TO_B0();
-    while (CONTROLLER_2_PIN == 0); while (CONTROLLER_2_PIN > 0); WAIT(); stateBufferController[0] = CONTROLLER_2_PIN_TO_B0();
-    while (CONTROLLER_2_PIN == 0); while (CONTROLLER_2_PIN > 0); WAIT(); stateBufferController[0] = CONTROLLER_2_PIN_TO_B0();
-    while (CONTROLLER_2_PIN == 0); while (CONTROLLER_2_PIN > 0); WAIT(); stateBufferController[0] = CONTROLLER_2_PIN_TO_B0();
+    /*..........................*/ while (CONTROLLER_2_PIN > 0); WAIT(); console_command = CONTROLLER_2_PIN_TO_B0();
+    while (CONTROLLER_2_PIN == 0); while (CONTROLLER_2_PIN > 0); WAIT(); console_command |= CONTROLLER_2_PIN_TO_B1();
+    while (CONTROLLER_2_PIN == 0); while (CONTROLLER_2_PIN > 0); WAIT(); console_command |= CONTROLLER_2_PIN_TO_B2();
+    while (CONTROLLER_2_PIN == 0); while (CONTROLLER_2_PIN > 0); WAIT(); console_command |= CONTROLLER_2_PIN_TO_B3();
+    while (CONTROLLER_2_PIN == 0); while (CONTROLLER_2_PIN > 0); WAIT(); console_command |= CONTROLLER_2_PIN_TO_B4();
+    while (CONTROLLER_2_PIN == 0); while (CONTROLLER_2_PIN > 0); WAIT(); console_command |= CONTROLLER_2_PIN_TO_B5();
+    while (CONTROLLER_2_PIN == 0); while (CONTROLLER_2_PIN > 0); WAIT(); console_command |= CONTROLLER_2_PIN_TO_B6();
+    while (CONTROLLER_2_PIN == 0); while (CONTROLLER_2_PIN > 0); WAIT(); console_command |= CONTROLLER_2_PIN_TO_B7();
+    while (CONTROLLER_2_PIN == 0); while (CONTROLLER_2_PIN > 0); WAIT(); checkbyte2 = CONTROLLER_2_PIN_TO_B0();
+
+    if (console_command != CONSOLE_COMMAND_POLL)
+        return 0;
+    
     while (CONTROLLER_2_PIN == 0); while (CONTROLLER_2_PIN > 0); WAIT(); stateBufferController[0] = CONTROLLER_2_PIN_TO_B0();
     while (CONTROLLER_2_PIN == 0); while (CONTROLLER_2_PIN > 0); WAIT(); stateBufferController[0] |= CONTROLLER_2_PIN_TO_B1();
     while (CONTROLLER_2_PIN == 0); while (CONTROLLER_2_PIN > 0); WAIT(); stateBufferController[0] |= CONTROLLER_2_PIN_TO_B2();
@@ -254,6 +282,8 @@ inline void read_controller_2_pin_to_min_buffer()
     while (CONTROLLER_2_PIN == 0); while (CONTROLLER_2_PIN > 0); WAIT(); stateBufferController[3] |= CONTROLLER_2_PIN_TO_B5();
     while (CONTROLLER_2_PIN == 0); while (CONTROLLER_2_PIN > 0); WAIT(); stateBufferController[3] |= CONTROLLER_2_PIN_TO_B6();
     while (CONTROLLER_2_PIN == 0); while (CONTROLLER_2_PIN > 0); WAIT(); stateBufferController[3] |= CONTROLLER_2_PIN_TO_B7();
+
+    return 1;
 }
 
 inline void sendPacket(char controller) {
@@ -296,11 +326,16 @@ void loop()
     // read when it's still connected.
     send_count = 0;
 
+    stateBufferController[0] = 0;
+    stateBufferController[1] = 0;
+    stateBufferController[2] = 0;
+    stateBufferController[3] = 0;
+
     if (controller_1_enabled) {
     
         noInterrupts();
         TCNT1 = 0;
-        read_controller_1_pin_to_min_buffer();
+        read_success = read_controller_1_pin_to_min_buffer();
         timer1_count = TCNT1;
         interrupts();
         
@@ -312,7 +347,7 @@ void loop()
                 controller_1_enabled = 0;
             }
         }
-        else
+        else if (read_success)
         {
             #ifdef DEBUG_SERIAL_PRINT
             sendDebugPacket('1');
@@ -335,7 +370,7 @@ void loop()
 
         noInterrupts();
         TCNT1 = 0;
-        read_controller_2_pin_to_min_buffer();
+        read_success = read_controller_2_pin_to_min_buffer();
         timer1_count = TCNT1;
         interrupts();
         
@@ -347,7 +382,7 @@ void loop()
                 controller_2_enabled = 0;
             }
         }
-        else
+        else if (read_success)
         {
             #ifdef DEBUG_SERIAL_PRINT
             sendDebugPacket('2');
