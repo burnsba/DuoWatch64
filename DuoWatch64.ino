@@ -96,11 +96,15 @@
 // Read controller data into this buffer.
 unsigned char stateBufferController[4];
 
+// #WARNING#
+// If controller 1 is not plugged in, and the flag below is enabled, nothing will work.
 // Flag to disable/enable reading controller 1.
 unsigned char controller_1_enabled = 1;
 
+// #WARNING#
+// If controller 2 is not plugged in, and the flag below is enabled, nothing will work.
 // Flag to disable/enable reading controller 2.
-unsigned char controller_2_enabled = 1;
+unsigned char controller_2_enabled = 0;
 
 // temp variable to read timer1
 unsigned int timer1_count;
@@ -344,6 +348,10 @@ void loop()
             controller_1_failcount++;
             if (controller_1_failcount > FAIL_STOP_COUNT)
             {
+                #ifdef DEBUG_SERIAL_PRINT
+                Serial.print("disabling controller 1.\n");
+                #endif
+                
                 controller_1_enabled = 0;
             }
         }
@@ -379,6 +387,10 @@ void loop()
             controller_2_failcount++;
             if (controller_2_failcount > FAIL_STOP_COUNT)
             {
+                #ifdef DEBUG_SERIAL_PRINT
+                Serial.print("disabling controller 2.\n");
+                #endif
+                
                 controller_2_enabled = 0;
             }
         }
